@@ -1,6 +1,8 @@
-# visual-time-sync
+# [visual-time-sync](https://angelcarro.github.io/visual-time-sync/index.html)
 
 This is a web-based tool designed to simplify the process of synchronizing recordings from multiple cameras using a tablet or smartphone. It provides a visual representation of time that can be shown to all the cameras so the recordings can be synchronized later. 
+
+URL: https://angelcarro.github.io/visual-time-sync/index.html
 
 Features:
  - The time is shown with a big timestamp at the top: hh:mm:ss.sss
