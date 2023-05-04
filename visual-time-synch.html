@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Real-time Clock</title>
+
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Courier New', Courier, monospace;
+      text-align: center;
+      background-color: black;
+      color: white;
+    }
+
+    body a {
+      color: #809fff;
+    }
+
+
+    #status-bar {
+      width: 100vw;
+      max-width: 100vw;
+      height: 16px;
+      max-height: 16px;
+      background-color: #333;
+      color: #fff;
+      padding-top: 10px;
+      padding-bottom: 10px;
+      z-index: 9999;
+      font-size: 16px;
+    }
+
+    #status-bar:hover {
+      background-color: #444;
+    }
+
+    #status-bar-config {
+      display: none;
+      position: fixed;
+      top: 36px;
+      /*left: 50%;
+      transform: translateX(-50%);*/
+      width: 60vw;
+      background-color: rgba(10, 10, 10, 0.8);
+      border: 1px solid #ccc;
+      padding: 10px;
+      z-index: 99999;
+    }
+
+    #status-bar-config.show {
+      display: block;
+    }
+
+    #config-button {
+      float: left;
+    }
+
+    #log-button {
+      float:left;
+      margin-left: 10px;
+    }
+
+    .config-option {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      text-align: left;
+    }
+
+    .config-option label {
+      flex: 1;
+      margin-right: 10px;
+    }
+
+    .config-option input[type="range"] {
+      width: 70%;
+    }
+
+    .config-option input[type="checkbox"] {
+      margin: 0.4rem;
+    }
+
+    #status-bar-log {
+      display: none;
+      position: fixed;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80vw;
+      background-color: rgba(10, 10, 10, 0.8);
+      border: 1px solid #ccc;
+      padding: 10px;
+      z-index: 99998;
+    }
+    #status-bar-log.show {
+      display: block;
+    }
+
+    #log-textarea {
+      scroll-behavior: auto;
+      width: 90%;
+      height: 40vh;
+    }
+
+    #container {
+      height: auto;
+      max-height: 15vh;
+    }
+
+    #clock {
+      font-size: min(13vw, 14vh);
+      font-family: "Courier New", Courier, monospace;
+      text-align: center;
+    }
+
+
+    #fps-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    #fps-container label {
+      font-size: 16px;
+      margin-right: 10px;
+    }
+
+    #fps-container input {
+      width: 60%;
+    }
+
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(10, 1fr);
+      width: 100vw;
+      min-width: 100vw;
+      height: calc(100vh - 15vh - 36px);
+    }
+
+    .grid-container.square {
+      width: min(100vw, calc(100vh - 15vh - 36px));
+      min-width: min(100vw, calc(100vh - 15vh - 36px));
+      height: min(100vw, calc(100vh - 15vh - 36px));
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+
+    .ds-cell {
+      position: relative;
+      background-color: black;
+      /*rgba(255, 255, 255, 0.2);*/
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .ds-cell.active {
+      background-color: #f0d585;
+    }
+
+    .inner-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      width: 90%;
+      height: 90%;
+    }
+
+    .grid-item {
+      background-color: rgba(0, 0, 0, 0.3);
+      /*black;*/
+      border: 1px solid rgb(255, 255, 255);
+    }
+
+    .grid-item.active {
+      background-color: red;
+    }
+  </style>
+
+
+</head>
+
+<body>
+
+  <div id="status-bar">
+    <button id="config-button">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&equiv;&nbsp; Config &nbsp;&equiv;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</button> <!--&#9881;-->
+    <button id="log-button">&nbsp;&nbsp;Log&nbsp;&nbsp;</button>
+
+    <div id="status-info">FPS: <span id="fps-value">20</span>
+      &nbsp;&nbsp; &nbsp; &nbsp;
+      Time offset: <span id="time-drift">0</span> <!--&nbsp;&nbsp; &nbsp; &nbsp;
+      Last drift error: <span id="time-drift-error">0</span>-->
+      &nbsp;&nbsp; &nbsp; &nbsp;
+      <span id="nosleep-status" style="background-color: red;">Wake Lock disabled</span>
+    </div>
+
+    <div id="status-bar-config">
+      <div class="config-option">
+        <label for="fps-slider">FPS:</label>
+        <span id="fps-slider-value">20</span>
+        <input type="range" id="fps-slider" name="fps" min="1" max="60" value="20">
+      </div>
+      <div class="config-option">
+        <input type="checkbox" id="square-grid" name="square-grid">
+        <label for="square-grid">Square grid</label>
+      </div>
+      <div class="config-option">
+        <input type="checkbox" id="use-performance-time" name="use-performance-time" checked>
+        <label for="use-performance-time">Use performance.now() time</label>
+      </div>
+      <div class="config-option">
+        <input type="checkbox" id="NoSleep" name="NoSleep">
+        <label for="NoSleep">Disable screen sleep. Uses <a href="https://github.com/richtr/NoSleep.js"
+            target="_blank">NoSleep</a></label>
+      </div>
+      <div class="config-option">
+        <button id="full-screen-btn">Fullscreen</button>
+      </div>
+    </div>
+
+    <div id="status-bar-log">
+      <div>
+        <textarea id='log-textarea' autofocus readonly></textarea>
+      </div>
+      <div>
+        <button id="save-log-btn">Save the log to a file</button>
+        <button id="share-log-btn">Share the log</button>
+      </div>
+    </div>
+
+  </div>
+
+
+  <div id="container">
+    <div id="clock"></div>
+    <!--div id="fps-container">
+      <label for="fps-slider">FPS:</label>
+      <span id="fps-slider-value">20</span>
+      <input type="range" id="fps-slider" name="fps" min="1" max="60" value="20">
+    </div-->
+  </div>
+
+  <div class="grid-container" id="time-table"></div>
+
+  <script src="./NoSleep/NoSleep.min.js"></script>
+  <script src="app.js"></script>
+
+
+</body>
+
+</html>
